@@ -1,0 +1,36 @@
+name: Aggregate RSS Feeds
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # 每6小时运行一次
+  workflow_dispatch:        # 允许手动触发
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 第一步：抓取所有 RSS 源
+      - name: Fetch feeds
+        uses: Phantop/rss@v1
+        with:
+          list: list   # 指定你的 list 文件名
+
+      # 第二步：合并成总 feed
+      - name: Run aggregator
+        run: |
+          python rss_aggregator.py
+
+      # 第三步：提交更改到仓库
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git add aggregated_feed.xml
+          git commit -m "Auto-update feed $(date -u '+%Y-%m-%d %H:%M:%S')" || exit 0
+          git push
